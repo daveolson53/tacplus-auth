@@ -1,0 +1,64 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.\" (C) Copyright 2016 Cumulus Networks, Inc.  All rights reserved.
+.TH TACPLUS-AUTH 8 "October 18, 2016"
+.\" Please adjust this date whenever revising the manpage.
+.SH NAME
+tacplus-restrict \- set up restricted shell and links for tacplus-auth
+.SH SYNOPSIS
+.B tacplus-restrict
+.I -u
+user
+.RI [ -f
+(force)]
+.RI [ -i
+(init)] |
+.RI [ -a
+cmd1 cmd2 ...]
+.SH DESCRIPTION
+.B tacplus-restrict
+is a helper script to set up restricted shell environments for TACACS+
+accounts to be used with per-command authorization (with
+.BR tacplus.auth )
+.P
+The restricted shell (rbash) is required, because otherwise the TACACS+ user would
+be able to bypass the TACACS per-command authorization checking.
+.SH OPTIONS
+.IP -a
+Creates a symlink from
+.I /usr/sbin/tacplus-auth
+to each of the the requested commands to the bin directory.
+Those will be the only commands accessible to the user, and
+only if also permitted (at runtime) by the TACACS+ server when
+.I tacplus-auth
+is run.
+One or more commands follows the other arguments.  They may be full
+or relative pathnames.
+.IP -f
+Force (re)initialization, even if it has already been done.
+.IP -i
+Initialize the directory.   Saves any existing dot files in a
+.I .DOTfiles
+subdirectory.  Creates a
+.I bin
+subdirectory for use with the
+.I -a
+option.  Change the directory, files, and any subdirectories to be
+owned by
+.IR bin.bin ,
+and to remove all write permissions.
+Creates a
+.I .bashrc
+file with a PATH pointing only to a local bin subdirectory.  Creates
+the other
+.I bash
+dot files to source the
+.I .bashrc
+.IP -u\ user
+Username to be set up.  This is a required argument.   The user must be
+a local user, so that the
+.I chsh
+command can be used to change the login shell.
+.SH SEE ALSO
+.IR tacplus-auth (8)
+.SH AUTHOR
+Dave Olson <olson@cumulusnetworks.com>

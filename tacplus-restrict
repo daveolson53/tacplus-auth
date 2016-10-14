@@ -1,0 +1,152 @@
+#! /bin/sh
+#  Copyright 2016 by Cumulus Networks, Inc.
+
+# This script needs to be run as root or via sudo
+
+# Set up an existing account to be use a restricted shell
+# (only rbash is supported), changing the home directory so the 
+# user can not remove the dot files, and have the dot files
+# owned by bin.bin.
+
+# The intent is to set up an account for use by users who
+# are only allowed to use commands (and command arguments)
+# permitted by a TACACS+ server.
+
+# Set up a ~user/bin directory and PATH to point to that.
+# Create a symlink from /usr/sbin/tacplus-auth to each of
+# the the requested commands to the bin directory
+
+# Those will be the only commands accessible to the user, and
+# only if also permitted by the TACACS+ server
+
+# Use the -i option to initialize the directory
+# permissions and dot files.  It will only be run
+# once, unless the -f option is given
+
+# Use the -a to add command links that the user will be able
+# to potentially run (subject to authorization by the TACACS+ server)
+# The list of commands is given after all other arguments
+
+# -i and -a can be combined
+
+# The -u username argument is required
+
+# See
+#   man tacplus-auth
+# for additional information.
+
+prog=${0##*/}
+
+# could add rzsh or rksh in future, but keeping it simple for now
+shell=/bin/rbash
+tacacs_restrict=.tacacs_restricted # flag file for inited
+
+# set defaults
+user=
+addcmds=0 doinit=0 force=0
+
+usage()
+{
+   echo $prog: -u user '[-f (force)] [-i (init)]|[-a cmd1 cmd2 ...]' 1>&2
+   exit 1
+}
+
+fatal()
+{
+   echo $prog: "$@" 1>&2
+   exit 2
+}
+
+initialize()
+{
+    set -e # exit if any of the next group of com
+
+    chsh -s $shell $user || fatal Use tacacs0, tacacs15, etc. for username
+    chmod 755 $home
+
+    dots=$(echo .[a-zA-Z]*)
+    if [ -n "${dots}" -a "${dots}" != ".[a-zA-Z]*" ]; then
+	    # create dir if needed.  If this is the 2nd init
+	    # or later with dotfiles, the original backup will
+	    # be saved in the new backup.
+	    mkdir -p DOTback
+	    mv -i .[a-zA-Z]* DOTback/
+	    chown bin.bin DOTback
+	    chmod 750 DOTback
+	    mv DOTback .DOTback
+	    echo Moved old dot files to DOTback: ; (cd .DOTback && ls -a)
+    fi
+
+    for f in .bash_login .profile .bash_profile .bash_logout
+    do echo '. ~/.bashrc' > $f
+    done
+
+    echo "export PATH=$home/bin" > .bashrc
+
+    mkdir -p bin
+    touch ${tacacs_restrict}
+    chown -R bin.bin .
+    chmod -R o-w . # be paranoid
+    set +e # initialization complete
+}
+
+linkcmds()
+{
+    authcmd=/usr/sbin/tacplus-auth
+    [ -x $authcmd ] || fatal TACACS authorization command $authcmd not found
+    for c in $@; do
+       cmd=${c##*/} # make relative in case they gave full name
+       case $cmd in
+       sh|dash|bash|csh|tcsh|zsh|ksh|sh.distrib)
+	  echo $prog: Skipping shell $cmd because it bypasses restrictions
+          continue ;;
+       esac
+       ln -s -f $authcmd bin/$cmd
+    done
+    echo Commands availble to $user are
+    (cd bin && /bin/ls)
+}
+
+while getopts afiu: opt
+do
+    case $opt in
+    a) addcmds=1 ;;
+    i) doinit=1 ;;
+    f) force=1 ;;
+    u) user=$OPTARG ;;
+    ?) usage ;;
+    esac
+done
+
+shift $(( $OPTIND - 1 ))
+
+# sanity check that we have valid argument sets, and no
+# extra arguments
+[ $addcmds -eq 1 -a $# -eq 0 ] && usage
+[ $addcmds -eq 0 -a $# -ne 0 ] && usage
+[ -z "$user" ] && usage
+[ $doinit -eq 1 -a $addcmds -eq 0 -a $# -ne 0 ] && usage
+[ $addcmds -eq 0 -a $doinit -eq 0 ] && usage
+
+home=$(eval echo ~${user})
+[ -z "$home" -o "$home" = ~${user} ] && 
+	fatal Unable to get home directory for $user
+
+cd $home || fatal home dir "${home}" for $user does not exist
+
+[ -e ${tacacs_restrict} -a $doinit -eq 1 -a $force -eq 0 ] &&
+   fatal initialization requested without '-f', and already initialized
+
+[ $addcmds -eq 1 -a ! -e ${tacacs_restrict} ] &&
+	echo $prog: Warning: not yet initialized
+
+
+
+[ -x $shell ] || fatal shell "${shell}" is not executable
+
+umask 222 # no write perms on any dirs or files
+
+[ $doinit -eq 1 ] && initialize
+
+[ $addcmds -eq 1 ] && linkcmds $@
+

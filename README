@@ -1,0 +1,56 @@
+tacplus-auth v1.0.0
+Oct 13, 2016
+
+The user name for tacacs accounting is that returned by getpwuid()
+with the uid returned by audit_getloginuid(), or if no auid, using
+the real uid returned by getresuid().
+
+It's expected this command will normally be used after login authenticated
+via a tacacs server, and if the pam_tacplus plugin is used, the auid will
+be set.
+
+This program does not directly use the tacplus-map library, but when
+libnss-tacplus is installed, that library and name lookup may be used.
+
+Only the TACACS+ authorization  functions are used.
+
+Up to 240 bytes of command name and command arguments will be sent
+in the authorization record, due to the 255 byte tacacs+ field length
+limitation.
+
+The TACACS code here is based in the pam_tacplus plugin, written by
+   Pawel Krawczyk <pawel.krawczyk@hush.com> and Jeroen Nijhof <jeroen@jeroennijhof.nl>
+   Copyright (C) 2010, Pawel Krawczyk <pawel.krawczyk@hush.com> and
+   Jeroen Nijhof <jeroen@jeroennijhof.nl>
+It is based on version pam_tacplus version 1.3.9.
+It uses the libtac.so shared library from a modified libpam_tacplus
+package.
+
+There is no configuration file for this program, it uses /etc/tacplus_servers
+for the list of servers and keys, and for debug.
+tacplus-auth should be setuid root, so that the config file can be opened.
+
+Privileges are dropped as soon as the configuration file is read.
+
+
+Option		        Description
+---------------- ----------------------------------
+debug            output debugging information via
+                 syslog(3); note, that the debugging
+                 is heavy, including passwords!
+			  
+secret=STRING    can be specified more than once;
+                 secret key used to encrypt/decrypt
+                 packets sent/received from the server
+
+server=IP_ADDR   can be specified more than once;
+                 adds a TACACS+ server to the servers
+                 list
+
+See the libpam_tacplus README for more information on the tacacs
+protocol.
+		
+Author:
+~~~~~~~
+
+Dave Olson <olson@cumulusnetworks.com>

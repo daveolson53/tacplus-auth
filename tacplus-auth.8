@@ -1,0 +1,83 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.\" (C) Copyright 2016 Cumulus Networks, Inc.  All rights reserved.
+.TH TACPLUS-AUTH 8 "October 13, 2016"
+.\" Please adjust this date whenever revising the manpage.
+.SH NAME
+tacplus-auth \- sending tacacs command authorization request to tacacs server
+.SH SYNOPSIS
+.B tacplus-auth
+.SH DESCRIPTION
+.B tacplus-auth
+is a front-end to authorize any command via a TACACS+ server, and
+execute the command only if authorized.
+.P
+It is invoked by being linked (with a symbolic link) to the same
+name as a system executable command or script.
+It authorizes based on the name it was invoked with, along with all the arguments
+(up to 250 characters).
+.P
+The authorization username is derived by looking up the auid
+returned by audit_getloginuid(), or if that is not set, then
+the real uid returned by getresuid().  The uid is looked up
+via getpwuid(), and the pw_name field is what is used.
+.SH OPTIONS
+There are no options to this command, any arguments are passed
+to the real underlying command.
+Because the underlying command
+options are not understood, and it may not take any arguments,
+the 
+.B tacplus-auth
+has no usage message or help text.
+.P
+A fixed search path is used to find the real executable by checking the PATH in
+ENV_PATH from /etc/login.defs, and if that file is not found, by looking for PATH in
+/etc/environment for the matching
+.I real
+executable of the same base pathname.
+.P
+The matching real executable is considered a match if it is a regular file
+(from
+.IR stat (2)),
+and at least one of the execute bits are set.
+.P
+The 
+.B PATH
+environment variable is not used because it is expected that
+.B tacplus-auth
+is used in a restricted shell environment, such as rbash, with a
+.B PATH
+variable that does not allow the underlying executable
+to be run directly by the user.
+.SH ENVIRONMENT
+If the environment variable
+.B TACACSAUTHDEBUG
+is set to any value, debugging will be enabled.
+Debugging, whether from this environment variable or set by
+the configuration file below, is written to stderr.
+.SH FILES
+.IR /etc/tacplus_servers \ -
+For the list of TACACS+ servers and their keys, and also the
+debug setting.  This file is normally installed as part of the
+libpam-tacplus package.   See the documentation for that package
+for the format.  libpam-tacplus is not required for this command
+to function correctly.  The following variables are used:
+.br
+.IP debug 16
+Enables debugging
+.br
+.IP secret=STRING 16
+shared secret for the TACACS+ server encryption (may be given multiple times)
+.br
+.IP server=IP_ADDR 16
+TACACS+ server IP address (may be given multiple times)
+.P
+Since this configuration file is normally readable only by root, this command
+must be installed setuid root.   Root privileges are dropped as soon as the
+configuration file is read.
+.SH SEE ALSO
+.IR tacplus-restrict (8)
+.SH FILES
+.IR /etc/login.defs ,\  /etc/environment \ -
+Used to get the search PATH to find the real executable.
+.SH AUTHOR
+Dave Olson <olson@cumulusnetworks.com>

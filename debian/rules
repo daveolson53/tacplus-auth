@@ -1,0 +1,17 @@
+#!/usr/bin/make -f
+
+DPKG_EXPORT_BUILDFLAGS = 1
+include /usr/share/dpkg/default.mk
+
+# main packaging script based on dh7 syntax
+%:
+	dh $@  --with autotools-dev
+
+override_dh_auto_configure:
+	dh_auto_configure -- --mandir=/usr/share/man
+
+# dh_fixperms is clobbering the setuid permissions the Makefile sets
+# on tacplus-auth.  This keeps that from happening.
+override_dh_fixperms:
+	dh_fixperms -X usr/sbin/tacplus-auth
+	ls -l debian/tacplus-auth/usr/sbin/tacplus-auth

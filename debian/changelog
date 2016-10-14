@@ -1,0 +1,6 @@
+tacplus-auth (1.0.0) UNRELEASED; urgency=low
+
+  * Initial release of front end command to do TACACS+ per-command
+    authorization
+
+ -- Dave Olson <olson@cumulusnetworks.com>  Thu, 13 Oct 2016 16:06:40 -0700
