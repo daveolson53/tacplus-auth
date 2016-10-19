@@ -70,6 +70,9 @@
 /* Define to 1 if you have the <tacplus/libtac.h> header file. */
 #undef HAVE_TACPLUS_LIBTAC_H
 
+/* Define to 1 if you have the <tacplus/tacplus.h> header file. */
+#undef HAVE_TACPLUS_TACPLUS_H
+
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
