@@ -43,9 +43,7 @@ dnl --------------------------------------------------------------------
 dnl Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([libaudit.h fcntl.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h])
-AC_CHECK_HEADERS([tacplus/libtac.h])
-AC_CHECK_HEADER(auparse.h, [], [AC_MSG_ERROR([audit dev missing missing. Install
-                            libaudit-dev and/or libauparse-dev.])] )
+AC_CHECK_HEADERS([tacplus/libtac.h tacplus/tacplus.h])
 
 
 dnl --------------------------------------------------------------------
