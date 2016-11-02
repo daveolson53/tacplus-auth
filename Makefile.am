@@ -7,6 +7,7 @@ tacplus_auth_SOURCES = tacplus-auth.c
 tacplus_auth_CFLAGS = -O -Wall -Werror
 tacplus_auth_LDADD = -ltac -laudit
 sbin_PROGRAMS = tacplus-auth
+sbin_SCRIPTS = tacplus-restrict
 man_MANS = tacplus-auth.8
 
 clean-generic:
