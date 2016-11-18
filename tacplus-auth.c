@@ -96,15 +96,24 @@ tacplus_config(const char *cfile, int level)
         else if(!strncmp(lbuf, "secret=", 7)) {
             /* no need to complain if too many on this one */
             if(tac_key_no < TAC_PLUS_MAXSERVERS) {
+                int i;
                 if((tac_srv[tac_key_no].key = strdup(lbuf+7)))
                     tac_key_no++;
-                else
+                else {
                     /*
                      * don't show the actual key, since we are usually run
                      * by an unprivileged user.
                      */
                     fprintf(stderr, "%s: unable to copy server secret\n",
                         progname);
+                }
+                /* handle case where 'secret=' was given after a 'server='
+                 * parameter, fill in the current secret */
+                for(i = tac_srv_no-1; i >= 0; i--) {
+                    if (tac_srv[i].key)
+                        continue;
+                    tac_srv[i].key = strdup(lbuf+7);
+                }
             }
         }
         else if(!strncmp(lbuf, "server=", 7)) {
