@@ -435,7 +435,6 @@ send_auth_msg(int tac_fd, const char *user, const char *tty, const char *host,
     for(i=1; i<argc; i++) {
         char tbuf[248];
         const char *arg;
-        tac_add_attrib(&attr, "cmd-arg", (char*)cmd);
         if(strlen(args[i]) > 247) {
             snprintf(tbuf, sizeof tbuf, "%s", args[i]);
             arg = tbuf;
