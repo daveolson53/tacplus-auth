@@ -93,6 +93,13 @@ tacplus_config(const char *cfile, int level)
         }
         else if(!strncmp(lbuf, "debug=", 6))
             debug = strtoul(lbuf+6, NULL, 0);
+        else if (!strncmp (lbuf, "timeout=", 8)) {
+            tac_timeout = (int)strtoul(lbuf+8, NULL, 0);
+            if (tac_timeout < 0) /* explict neg values disable poll() use */
+                tac_timeout = 0;
+            else /* poll() only used if timeout is explictly set */
+                tac_readtimeout_enable = 1;
+        }
         else if(!strncmp(lbuf, "secret=", 7)) {
             /* no need to complain if too many on this one */
             if(tac_key_no < TAC_PLUS_MAXSERVERS) {
