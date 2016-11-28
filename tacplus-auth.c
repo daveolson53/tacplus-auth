@@ -74,7 +74,7 @@ tacplus_config(const char *cfile, int level)
 
     conf = fopen(cfile, "r");
     if(conf == NULL) {
-        fprintf(stderr, "%s: can't open config file %s: %s\n",
+        fprintf(stderr, "%s: can't open TACACS config file %s: %s\n",
             progname, cfile, strerror(errno));
         return;
     }
@@ -111,7 +111,7 @@ tacplus_config(const char *cfile, int level)
                      * don't show the actual key, since we are usually run
                      * by an unprivileged user.
                      */
-                    fprintf(stderr, "%s: unable to copy server secret\n",
+                    fprintf(stderr, "%s: unable to copy TACACS server secret\n",
                         progname);
                 }
                 /* handle case where 'secret=' was given after a 'server='
@@ -152,13 +152,13 @@ tacplus_config(const char *cfile, int level)
                         tac_srv_no++;
                     }
                 }
-                else {
+                else if(debug) {
                     fprintf(stderr,
                         "%s: skip invalid server: %s (getaddrinfo: %s)\n",
                         progname, server_buf, gai_strerror(rv));
                 }
             }
-            else {
+            else if(debug) {
                 fprintf(stderr, "%s: maximum number of servers (%d) exceeded, "
                     "skipping\n", progname, TAC_PLUS_MAXSERVERS);
             }
@@ -169,7 +169,7 @@ tacplus_config(const char *cfile, int level)
     }
 
     if(level == 0 && tac_srv_no == 0)
-        fprintf(stderr, "%s no tacacs servers in file %s\n",
+        fprintf(stderr, "%s no TACACS servers in file %s\n",
             progname, configfile);
 
     fclose(conf);
@@ -359,6 +359,7 @@ main(int argc, char *argv[])
 {
     struct passwd *pw;
     char path[PATH_MAX], *cmd;
+    int ret;
 
     if(getenv("TACACSAUTHDEBUG")) /* if present, with any value */
         debug = 1;
@@ -397,7 +398,8 @@ main(int argc, char *argv[])
             progname, path);
 
     /* accumulate command, and do auth; */
-    if (build_auth_req(pw->pw_name, cmd, argv, argc) == 0) {
+    ret = build_auth_req(pw->pw_name, cmd, argv, argc);
+    if (ret == 0) {
         if (debug)
             fprintf(stderr, "%s: %s authorized, executing\n",
                 progname, cmd);
@@ -405,8 +407,9 @@ main(int argc, char *argv[])
             fprintf(stderr, "%s exec failed: %s\n",
                 path, strerror(errno));
     }
-    fprintf(stderr, "%s not authorized by TACACS+ with given arguments, not"
-        " executing\n", cmd);
+    if (ret != -2) /*  -2 means no servers, so already a message */
+        fprintf(stderr, "%s not authorized by TACACS+ with given arguments, not"
+            " executing\n", cmd);
 
 	return 1;
 }
@@ -491,7 +494,7 @@ static int
 send_tacacs_auth(const char *user, const char *tty, const char *host,
     const char *cmd, char **args, int argc)
 {
-    int retval = 1, srv_i, srv_fd;
+    int retval = 1, srv_i, srv_fd, servers=0;
     uint16_t task_id;
 
     task_id = (uint16_t)getpid();
@@ -499,24 +502,37 @@ send_tacacs_auth(const char *user, const char *tty, const char *host,
     for(srv_i = 0; srv_i < tac_srv_no; srv_i++) {
         srv_fd = tac_connect_single(tac_srv[srv_i].addr, tac_srv[srv_i].key,
             NULL);
-        if(srv_fd == -1) {
-            fprintf(stderr, "%s: error connecting to %s to request"
-                " authorization for %s: %s\n", progname,
-                tac_ntop(tac_srv[srv_i].addr->ai_addr),
-                cmd, strerror(errno));
+        if(srv_fd < 0) {
+            /*
+             * This is annoying in the middle of a command, so
+             * only print for debug.
+            */
+            if(debug)
+                fprintf(stderr, "%s: error connecting to %s to request"
+                    " authorization for %s: %s\n", progname,
+                    tac_ntop(tac_srv[srv_i].addr->ai_addr),
+                    cmd, strerror(errno));
             continue;
         }
+        servers++;
         retval = send_auth_msg(srv_fd, user, tty, host, task_id,
             cmd, args, argc);
         if(retval && debug)
             fprintf(stderr, "%s: %s not authorized from %s\n",
                 progname, cmd, tac_ntop(tac_srv[srv_i].addr->ai_addr));
         close(srv_fd);
-        if(!retval) {
+        if(!retval && debug) {
             fprintf(stderr, "%s: %s authorized command %s\n",
                 progname, tac_ntop(tac_srv[srv_i].addr->ai_addr), cmd);
             break; /* stop after first successful response */
         }
+    }
+    /*  if not debug, let them know when we couldn't reach any servers */
+    if(!servers) {
+        retval = -2; /*  so we don't say command not authorized */
+        if(!debug)
+            fprintf(stderr, "%s: Unable to connect to TACACS server(s)\n",
+                progname);
     }
     return retval;
 }
