@@ -103,7 +103,7 @@ linkcmds()
        esac
        ln -s -f $authcmd bin/$cmd
     done
-    echo Commands availble to $user are
+    echo Commands available to $user are
     (cd bin && /bin/ls)
 }
 
