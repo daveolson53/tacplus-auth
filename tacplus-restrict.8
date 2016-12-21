@@ -14,6 +14,8 @@ user
 (init)] |
 .RI [ -a
 cmd1 cmd2 ...]
+.RI [ -d
+cmd1 cmd2 ...]
 .SH DESCRIPTION
 .B tacplus-restrict
 is a helper script to set up restricted shell environments for TACACS+
@@ -26,13 +28,22 @@ be able to bypass the TACACS per-command authorization checking.
 .IP -a
 Creates a symlink from
 .I /usr/sbin/tacplus-auth
-to each of the the requested commands to the bin directory.
+to each of the the requested commands to the bin sub-directory.
 Those will be the only commands accessible to the user, and
 only if also permitted (at runtime) by the TACACS+ server when
 .I tacplus-auth
 is run.
 One or more commands follows the other arguments.  They may be full
-or relative pathnames.
+or relative pathnames.  May not be used with
+.I -d
+.IP -d
+Removes command symlinks for each named command from the
+to each of the the requested commands to the bin sub-directory.
+Those will be make the commands unavailable for the named user.
+May not be used with
+.I -a
+.IP
+If command is '*' (quoted asterisk), all commands are removed.
 .IP -f
 Force (re)initialization, even if it has already been done.
 .IP -i
@@ -57,7 +68,9 @@ dot files to source the
 Username to be set up.  This is a required argument.   The user must be
 a local user, so that the
 .I chsh
-command can be used to change the login shell.
+command can be used to change the login shell.  Normally the username will
+be tacacs0, tacacs1, ... tacacs15, the preconfigured local users used for
+mapping TACACS+ privilege levels.
 .SH SEE ALSO
 .IR tacplus-auth (8)
 .SH AUTHOR

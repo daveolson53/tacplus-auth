@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /bin/bash
 #  Copyright 2016 by Cumulus Networks, Inc.
 
 # This script needs to be run as root or via sudo
@@ -42,24 +42,29 @@ shell=/bin/rbash
 tacacs_restrict=.tacacs_restricted # flag file for inited
 
 # set defaults
-user=
-addcmds=0 doinit=0 force=0
+user= firstarg=
+addcmds=0 delcmds=0 doinit=0 force=0
+
+warn()
+{
+    echo $prog: Warning: "$@" 1>&2
+}
 
 usage()
 {
-   echo $prog: -u user '[-f (force)] [-i (init)]|[-a cmd1 cmd2 ...]' 1>&2
+   echo Usage: $prog '-u user [-f (force)] [-i (init)] [(-a|-d) cmd1 cmd2 ...]' 1>&2
    exit 1
 }
 
 fatal()
 {
-   echo $prog: "$@" 1>&2
+   warn "$@"
    exit 2
 }
 
 initialize()
 {
-    set -e # exit if any of the next group of com
+    set -e # exit if any of the next group of commands fail
 
     chsh -s $shell $user || fatal Use tacacs0, tacacs15, etc. for username
     chmod 755 $home
@@ -92,9 +97,9 @@ initialize()
 
 linkcmds()
 {
-    authcmd=/usr/sbin/tacplus-auth
+    local authcmd=/usr/sbin/tacplus-auth
     [ -x $authcmd ] || fatal TACACS authorization command $authcmd not found
-    for c in $@; do
+    for c in "${firstarg}" "$@"; do
        cmd=${c##*/} # make relative in case they gave full name
        case $cmd in
        sh|dash|bash|csh|tcsh|zsh|ksh|sh.distrib)
@@ -103,32 +108,84 @@ linkcmds()
        esac
        ln -s -f $authcmd bin/$cmd
     done
-    echo Commands available to $user are
-    (cd bin && /bin/ls)
 }
 
-while getopts afiu: opt
+# inverse of linkcmds, but supports '*' to delete all
+unlinkcmds()
+{
+    (
+    cd bin || exit 1
+    for c in "${firstarg}" "$@"; do
+       case "${c}" in
+       '*') warn Removing all commands for $user: $(echo *) ; rm -f -- * ;;
+       *)  rm -f -- "${c}" ;;
+       esac
+    done
+    )
+}
+
+listcmds()
+{
+    if [ ! -d bin ]; then
+        warn No commands available to user $user
+        return
+    fi
+    (
+    cd bin || exit 1
+    p=${user/tacacs}
+    case "$p" in
+    [0-9]|1[0-5]) umsg="$user (TACACS+ priv=$p)" ;;
+    *) umsg=$user ;;
+    esac
+    cmds=$(echo *)
+    case "$cmds" in
+    '*'|'') warn No commands available to user $umsg ;;
+    *)      echo Commands available to $umsg are:
+            /bin/ls -C
+    esac
+    )
+}
+
+# With both arrays and using set -- $(getopt ...), if any of the
+# getopts has similar issues, and I want to detect things like
+#   -a cmd1 cmd2 -d cmd3
+# getopts builtin can't do that, but getopt does.
+# There is an issue with quoted arguments not remaining quoted
+# but that's OK for this use.
+# Unfortunately, the quoting itself (getopt uses apostrophe quotes)
+# can cause problems.  So use getopts, and step through all args.
+
+while getopts a:d:fhiu: opt
 do
-    case $opt in
-    a) addcmds=1 ;;
+    case "$opt" in
+    a) addcmds=1 firstarg="$OPTARG" ;;
+    d) delcmds=1 firstarg="$OPTARG" ;;
+    u) user=$OPTARG ;;
     i) doinit=1 ;;
     f) force=1 ;;
-    u) user=$OPTARG ;;
-    ?) usage ;;
+    h|?) usage ;;
     esac
 done
 
-shift $(( $OPTIND - 1 ))
+shift $(( OPTIND - 1 ))
+
+# catch things like -a b c -d e f g
+for a in $@; do
+    case "$a" in
+    -d) [ $addcmds -eq 1 ] && usage ;;
+    -a) [ $delcmds -eq 1 ] && usage ;;
+    esac
+done
 
 # sanity check that we have valid argument sets, and no
 # extra arguments
-[ $addcmds -eq 1 -a $# -eq 0 ] && usage
-[ $addcmds -eq 0 -a $# -ne 0 ] && usage
+[ $addcmds -eq 1 -a $delcmds -eq 1 ] && usage
+[ $addcmds -eq 0 -a $delcmds -eq 0 -a $# -ne 0 ] && usage
 [ -z "$user" ] && usage
-[ $doinit -eq 1 -a $addcmds -eq 0 -a $# -ne 0 ] && usage
-[ $addcmds -eq 0 -a $doinit -eq 0 ] && usage
+[ $doinit -eq 1 -a $addcmds -eq 0 -a $delcmds -eq 0 -a $# -ne 0 ] && usage
+[ $addcmds -eq 0 -a $doinit -eq 0 -a $delcmds -eq 0 ] && usage
 
-home=$(eval echo ~${user})
+home=$(eval echo ~"${user}")
 [ -z "$home" -o "$home" = ~${user} ] && 
 	fatal Unable to get home directory for $user
 
@@ -137,10 +194,8 @@ cd $home || fatal home dir "${home}" for $user does not exist
 [ -e ${tacacs_restrict} -a $doinit -eq 1 -a $force -eq 0 ] &&
    fatal initialization requested without '-f', and already initialized
 
-[ $addcmds -eq 1 -a ! -e ${tacacs_restrict} ] &&
-	echo $prog: Warning: not yet initialized
-
-
+[ \( $addcmds -eq 1 -o $delcmds -eq 1 \) -a ! -e ${tacacs_restrict} ] &&
+	warn not yet initialized
 
 [ -x $shell ] || fatal shell "${shell}" is not executable
 
@@ -148,5 +203,7 @@ umask 222 # no write perms on any dirs or files
 
 [ $doinit -eq 1 ] && initialize
 
-[ $addcmds -eq 1 ] && linkcmds $@
+[ $addcmds -eq 1 ] && linkcmds "$@"
+[ $delcmds -eq 1 ] && unlinkcmds "$@"
 
+listcmds # Always show which commands are avilable now
