@@ -38,12 +38,14 @@
 prog=${0##*/}
 
 # could add rzsh or rksh in future, but keeping it simple for now
-shell=/bin/rbash
+shell=/bin/rbash origshell=/bin/bash
 tacacs_restrict=.tacacs_restricted # flag file for inited
+
+authprog=/usr/sbin/tacplus-auth # command that does authorization
 
 # set defaults
 user= firstarg=
-addcmds=0 delcmds=0 doinit=0 force=0
+addcmds=0 delcmds=0 doinit=0 dorestore=0 force=0
 
 warn()
 {
@@ -52,7 +54,7 @@ warn()
 
 usage()
 {
-   echo Usage: $prog '-u user [-f (force)] [-i (init)] [(-a|-d) cmd1 cmd2 ...]' 1>&2
+   echo Usage: $prog '-u user [-f (force)] [-i (init)] [-R (restore)] [(-a|-d) cmd1 cmd2 ...]' 1>&2
    exit 1
 }
 
@@ -66,8 +68,8 @@ initialize()
 {
     set -e # exit if any of the next group of commands fail
 
-    chsh -s $shell $user || fatal Use tacacs0, tacacs15, etc. for username
-    chmod 755 $home
+    chsh -s $shell $user || fatal Use tacacs0, tacacs15, etc. for -u arg
+    chmod 755 $home || $warn Unable to chmod ${user} home directory $home
 
     dots=$(echo .[a-zA-Z]*)
     if [ -n "${dots}" -a "${dots}" != ".[a-zA-Z]*" ]; then
@@ -95,10 +97,51 @@ initialize()
     set +e # initialization complete
 }
 
+
+# dorestore the initialization.  Return shell to /bin/bash, restore dotfiles, etc.
+restore()
+{
+    local l cmd lev=${user#tacacs}
+
+    warn Restoring $user '(tacacs priv='$lev')' to normal use,'
+    able to run all commands.'
+    warn You have 5 seconds to interrupt to prevent the restore
+    sleep 5
+
+    chsh -s $origshell $user || warn unable to restore shell $origshell for $user
+
+    for f in .bash_login .profile .bash_profile .bash_logout
+    do rm -f $f # remove the files we created in initialize()
+    done
+
+    dots=$(echo .DOTback/.[a-zA-Z]* | sed 's,.DOTback/.DOTback,,')
+    if [ -z "${dots}" -o "${dots}" = ".DOTback/.[a-zA-Z]*" ]; then
+        warn No saved files '(.bashrc, etc.)', using /etc/skel
+        cp -a /etc/skel/.[a-zA-Z0-9]* .
+    else
+        mv ${dots} .
+    fi
+
+    [ -e ${tacacs_restrict} ] && rm ${tacacs_restrict}
+
+    # Only remove .DOTback if empty, not rm -rf.  Sometimes multiple levels
+    rmdir .DOTback 2>/dev/null
+    [ -d .DOTback ] && chown -R ${user}.tacacs .DOTback # make user can see files
+
+    for cmd in bin/*; do
+        [ -L "${cmd}" ] && {
+            l=$(readlink -s "${cmd}")
+            case "$l" in
+            $authprog) rm -f "${cmd}" ;;
+            esac
+        }
+    done
+    rmdir bin 2>/dev/null # remove if empty
+}
+
 linkcmds()
 {
-    local authcmd=/usr/sbin/tacplus-auth
-    [ -x $authcmd ] || fatal TACACS authorization command $authcmd not found
+    [ -x $authprog ] || fatal TACACS authorization command $authprog not found
     for c in "${firstarg}" "$@"; do
        cmd=${c##*/} # make relative in case they gave full name
        case $cmd in
@@ -106,7 +149,7 @@ linkcmds()
 	  echo $prog: Skipping shell $cmd because it bypasses restrictions
           continue ;;
        esac
-       ln -s -f $authcmd bin/$cmd
+       ln -s -f $authprog bin/$cmd
     done
 }
 
@@ -114,8 +157,10 @@ linkcmds()
 unlinkcmds()
 {
     (
+    [ ! -d bin ] && { warn All commands for $user have already been removed; exit 1; }
     cd bin || exit 1
     for c in "${firstarg}" "$@"; do
+       [ -L "${c}" ] || warn "${c}" is not currently an enabled command # but remove anyway
        case "${c}" in
        '*') warn Removing all commands for $user: $(echo *) ; rm -f -- * ;;
        *)  rm -f -- "${c}" ;;
@@ -126,8 +171,9 @@ unlinkcmds()
 
 listcmds()
 {
+    local lev=${user#tacacs}
     if [ ! -d bin ]; then
-        warn No commands available to user $user
+        warn No commands available to $user, tacacs priv=${lev}.
         return
     fi
     (
@@ -155,7 +201,7 @@ listcmds()
 # Unfortunately, the quoting itself (getopt uses apostrophe quotes)
 # can cause problems.  So use getopts, and step through all args.
 
-while getopts a:d:fhiu: opt
+while getopts a:d:fhiRu: opt
 do
     case "$opt" in
     a) addcmds=1 firstarg="$OPTARG" ;;
@@ -163,6 +209,7 @@ do
     u) user=$OPTARG ;;
     i) doinit=1 ;;
     f) force=1 ;;
+    R) dorestore=1;;
     h|?) usage ;;
     esac
 done
@@ -183,7 +230,8 @@ done
 [ $addcmds -eq 0 -a $delcmds -eq 0 -a $# -ne 0 ] && usage
 [ -z "$user" ] && usage
 [ $doinit -eq 1 -a $addcmds -eq 0 -a $delcmds -eq 0 -a $# -ne 0 ] && usage
-[ $addcmds -eq 0 -a $doinit -eq 0 -a $delcmds -eq 0 ] && usage
+[ $addcmds -eq 0 -a $doinit -eq 0 -a $delcmds -eq 0 -a $dorestore -eq 0 ] && usage
+[ $dorestore -eq 1 -a \( $addcmds -eq 1 -o $delcmds -eq 1 -o $doinit -eq 1 -o $# -ne 0 \) ] && usage
 
 home=$(eval echo ~"${user}")
 [ -z "$home" -o "$home" = ~${user} ] && 
@@ -200,6 +248,8 @@ cd $home || fatal home dir "${home}" for $user does not exist
 [ -x $shell ] || fatal shell "${shell}" is not executable
 
 umask 222 # no write perms on any dirs or files
+
+[ $dorestore -eq 1 ] && { restore ; exit 1; }
 
 [ $doinit -eq 1 ] && initialize
 
