@@ -1,3 +1,9 @@
+tacplus-auth (1.0.1) UNRELEASED; urgency=low
+
+  * Add tacplus-restrict -R option to undo -i and -a options
+
+ -- devsupport <devsupport@cumulusnetworks.com>  Wed, 04 Jan 2017 19:22:25 -0800
+
 tacplus-auth (1.0.0) UNRELEASED; urgency=low
 
   * Initial release of front end command to do TACACS+ per-command

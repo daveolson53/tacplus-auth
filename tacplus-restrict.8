@@ -12,6 +12,8 @@ user
 (force)]
 .RI [ -i
 (init)] |
+.RI [ -R
+(restore)] |
 .RI [ -a
 cmd1 cmd2 ...]
 .RI [ -d
@@ -64,6 +66,13 @@ the other
 .I bash
 dot files to source the
 .I .bashrc
+.IP -R
+Restore the user's directory for normal use (reverse the -i and -a
+effects). This sets the shell
+to /bin/bash, and restores the saved dot files (.bashrc, etc.).
+There is a 5 second warning and pause to abort prior to the
+restore.  If no dot files are found, the files from /etc/skel
+are copied, as if a new user was being added.
 .IP -u\ user
 Username to be set up.  This is a required argument.   The user must be
 a local user, so that the
