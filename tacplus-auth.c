@@ -501,7 +501,7 @@ send_tacacs_auth(const char *user, const char *tty, const char *host,
 
     for(srv_i = 0; srv_i < tac_srv_no; srv_i++) {
         srv_fd = tac_connect_single(tac_srv[srv_i].addr, tac_srv[srv_i].key,
-            NULL);
+            NULL, NULL);
         if(srv_fd < 0) {
             /*
              * This is annoying in the middle of a command, so

@@ -1,10 +1,16 @@
-tacplus-auth (1.0.1) UNRELEASED; urgency=low
+tacplus-auth (1.0.2) unstable; urgency=low
+
+  * Modified to match updated libtac2 library interface
+
+ -- Dave Olson <olson@cumulusnetworks.com>  Wed, 08 Mar 2017 14:48:34 -0800
+
+tacplus-auth (1.0.1) unstable; urgency=low
 
   * Add tacplus-restrict -R option to undo -i and -a options
 
- -- devsupport <devsupport@cumulusnetworks.com>  Wed, 04 Jan 2017 19:22:25 -0800
+ -- Dave Olson <olson@cumulusnetworks.com>  Wed, 04 Jan 2017 19:22:25 -0800
 
-tacplus-auth (1.0.0) UNRELEASED; urgency=low
+tacplus-auth (1.0.0) unstable; urgency=low
 
   * Initial release of front end command to do TACACS+ per-command
     authorization
