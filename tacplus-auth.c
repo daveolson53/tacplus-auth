@@ -163,6 +163,9 @@ tacplus_config(const char *cfile, int level)
                     "skipping\n", progname, TAC_PLUS_MAXSERVERS);
             }
         }
+        else if(!strncmp(lbuf, "vrf=", 4) ||
+            !strncmp(lbuf, "user_homedir=", 13))
+            ; /*  we don't use these options, but don't complain below */
         else if(debug) /* ignore unrecognized lines, unless debug on */
             fprintf(stderr, "%s: unrecognized parameter: %s\n",
                 progname, lbuf);

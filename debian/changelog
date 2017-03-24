@@ -1,8 +1,9 @@
 tacplus-auth (1.0.2) unstable; urgency=low
 
   * Modified to match updated libtac2 library interface
+  * API change to support new user_homedir config variable.
 
- -- Dave Olson <olson@cumulusnetworks.com>  Wed, 08 Mar 2017 14:48:34 -0800
+ -- Dave Olson <olson@cumulusnetworks.com>  Fri, 24 Mar 2017 17:02:34 -0700
 
 tacplus-auth (1.0.1) unstable; urgency=low
 
