@@ -8,7 +8,7 @@
 	It is expected to be symlink'ed or linked into a bin directory for
 	restricted shell users such as rbash.  A link should exist
 	for every command the restricted user might run.
-	
+
 	The real command is found by checking the directories in PATH from the
 	ENV_PATH variable in /etc/login.defs, and if that file is not found, by
 	looking for PATH in /etc/environment.  This works for at least the major
@@ -19,7 +19,7 @@
 
 	tacplus-auth sends the command and arguments (up to 250 characters)
 	to each tacacs server for authorization.
-	
+
 	It tries each server in turn until it gets successful permission or there
 	are no more servers.  All servers are tried in case they have different
 	databases.

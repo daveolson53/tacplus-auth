@@ -8,12 +8,12 @@
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software Foundation,
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
@@ -163,6 +163,9 @@ tacplus_config(const char *cfile, int level)
                     "skipping\n", progname, TAC_PLUS_MAXSERVERS);
             }
         }
+        else if(!strncmp(lbuf, "vrf=", 4) ||
+            !strncmp(lbuf, "user_homedir=", 13))
+            ; /*  we don't use these options, but don't complain below */
         else if(debug) /* ignore unrecognized lines, unless debug on */
             fprintf(stderr, "%s: unrecognized parameter: %s\n",
                 progname, lbuf);
@@ -281,7 +284,7 @@ getenvironment(char *path, size_t len, const char *var)
     return ret;
 }
 
-/*  
+/*
  *  Get system PATH setting from login.defs ENV_PATH, and if login.defs
  *  can't be opened, try /etc/environment.
  *  the prefix through PATH= is stripped, as is any trailing whitespace
@@ -433,7 +436,7 @@ send_auth_msg(int tac_fd, const char *user, const char *tty, const char *host,
 
     tac_add_attrib(&attr, "cmd", (char*)cmd);
 
-    /* 
+    /*
      * Add the command arguments.  Each argument has to be
      * less than 255 chars, including the "cmdargs=" portion
      * With the linux tac_plus server, at least, somewhere around
@@ -501,7 +504,7 @@ send_tacacs_auth(const char *user, const char *tty, const char *host,
 
     for(srv_i = 0; srv_i < tac_srv_no; srv_i++) {
         srv_fd = tac_connect_single(tac_srv[srv_i].addr, tac_srv[srv_i].key,
-            NULL);
+            NULL, NULL);
         if(srv_fd < 0) {
             /*
              * This is annoying in the middle of a command, so

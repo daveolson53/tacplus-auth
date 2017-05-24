@@ -38,7 +38,7 @@ Option		        Description
 debug            output debugging information via
                  syslog(3); note, that the debugging
                  is heavy, including passwords!
-			  
+
 secret=STRING    can be specified more than once;
                  secret key used to encrypt/decrypt
                  packets sent/received from the server
@@ -49,7 +49,7 @@ server=IP_ADDR   can be specified more than once;
 
 See the libpam_tacplus README for more information on the tacacs
 protocol.
-		
+
 Author:
 ~~~~~~~
 
