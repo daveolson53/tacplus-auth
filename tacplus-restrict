@@ -4,7 +4,7 @@
 # This script needs to be run as root or via sudo
 
 # Set up an existing account to be use a restricted shell
-# (only rbash is supported), changing the home directory so the 
+# (only rbash is supported), changing the home directory so the
 # user can not remove the dot files, and have the dot files
 # owned by bin.bin.
 
@@ -234,7 +234,7 @@ done
 [ $dorestore -eq 1 -a \( $addcmds -eq 1 -o $delcmds -eq 1 -o $doinit -eq 1 -o $# -ne 0 \) ] && usage
 
 home=$(eval echo ~"${user}")
-[ -z "$home" -o "$home" = ~${user} ] && 
+[ -z "$home" -o "$home" = ~${user} ] &&
 	fatal Unable to get home directory for $user
 
 cd $home || fatal home dir "${home}" for $user does not exist
